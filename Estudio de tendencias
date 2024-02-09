@@ -1,0 +1,75 @@
+#SELECCIÓN DEL ARCHIVO
+#El archivo que carguemos debe contener la columna 'Query' con las keywords, la columna 'Impressions' con las impresiones y la columna '% Δ' con la variación relativa de las impresiones. Si el archivo cuenta con más columnas a la derecha no habrá problema, pues serán eliminadas durante la aplicación del modelo
+from google.colab import files
+
+#Selecciona el archivo desde tu sistema local
+uploaded = files.upload()
+
+#IMPORTACIÓN DEL ARCHIVO
+import pandas as pd
+import nltk
+from nltk.tokenize import word_tokenize
+from itertools import chain, combinations
+nltk.download('punkt')
+
+#Especifica el nombre del archivo
+file_name = 'blablabla.csv'
+
+#Carga el csv en un dataframe
+df = pd.read_csv(file_name)
+
+#Muestra las primeras filas del dataframe para comprobar que se ha cargado correctamente
+df.head()
+
+#APLICACIÓN DEL MODELO DE EXTRACCIÓN DE TENDENCIAS
+df = df.rename(columns = '% Δ': 'porcentaje')
+df = df.iloc[:, :3]
+df = df.dropna()
+
+#Obtenemos la variación absoluta de las impresiones
+df['variacion'] = (df['Impressions'] - (df['Impressions'] / (1 + df['porcentaje']))).round().astype(int)
+
+df.sort_values('variacion', ascending = False)
+columnas_a_eliminar = ['Impressions', 'porcentaje']
+df = df.drop(columns = columnas_a_eliminar)
+
+#Tokenizamos las palabras en cada keyword
+df['tokens] = df['Query').apply(word_tokenize)
+
+#Función para generar todas las combinaciones posibles de palabras en una lista
+def  generate_combinations(words):
+   all_combinations = []
+   for r in range(1, len(words)+1):
+    all_combinations.extend([' '.join(comb) for comb in combinations(words, r)])
+   return all_combinations
+
+#Aplicamos la función a cada fila de la columna 'tokens'
+df['all_combinations'] = df['tokens'].apply(generate_combinations)
+
+#Utilizamos explode directamente en la columna 'all_combinations'
+combinations_df = df.explode('all_combinations').reset_index(drop = True)
+
+#Creamos un DataFrame con las combinaciones y su respectivo tráfico
+result_df = combinations_df.groupby('all_combinations')['variacion'].sum().reset_index()
+
+#Filtramos para incluir solo combinaciones de al menos 2 palabras
+result_df = result_df[result_df['all_combinations']].apply(lambda x: len(x.split()) >= 2)
+
+#Ordenamos el DataFrame or tráfico de mayor a menor
+result_df = result_df.sort_values(by = 'variacion', ascending = False)
+
+#Mostramos los resultados
+print(result_df.head)
+
+#DESCARGAMOS EL ARCHIVO
+
+#Definimos el nombre del archivo
+nombre = 'hola.csv'
+
+#Exportamos el DataFrame a un csv
+result_df.to_csv(nombre, index = False)
+
+#Descargamos el archivo
+files.download(nombre)
+
+
